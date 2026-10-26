@@ -4,23 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>T5C Clan Copy Utility</title>
-    <!-- CSS thuần tối ưu hiệu năng, không phụ thuộc thư viện ngoài -->
     <style>
         :root {
             --bg-primary: #0f1015;
             --bg-secondary: #171922;
             --bg-tertiary: #1e2230;
             --border-color: #2b3042;
-            --border-glow: #5865f2;
             --accent-purple: #5865f2;
             --accent-purple-hover: #4752c4;
             --accent-cyan: #00f2fe;
-            --accent-red: #ff4757;
             --text-main: #f2f3f5;
             --text-muted: #949ba4;
             --success-bg: #23a55a;
-            --success-glow: #00e676;
-            --font-stack: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --font-stack: 'gg sans', 'Noto Sans', 'Segoe UI', Helvetica, Arial, sans-serif;
         }
 
         * {
@@ -45,7 +41,6 @@
             background-attachment: fixed;
         }
 
-        /* Container chính */
         .app-container {
             width: 100%;
             max-width: 800px;
@@ -54,28 +49,9 @@
             gap: 24px;
         }
 
-        /* Header Header */
         .header {
             text-align: center;
             padding: 16px 0 8px;
-            position: relative;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(88, 101, 242, 0.15);
-            color: var(--accent-cyan);
-            border: 1px solid rgba(0, 242, 254, 0.3);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.1);
         }
 
         .title {
@@ -94,16 +70,13 @@
             margin-top: 6px;
         }
 
-        /* Card container */
         .card {
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), 
-                        border-color 0.25s ease, 
-                        box-shadow 0.25s ease;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
             position: relative;
             overflow: hidden;
         }
@@ -130,7 +103,6 @@
             opacity: 1;
         }
 
-        /* Card Header & Title */
         .card-header {
             display: flex;
             justify-content: space-between;
@@ -154,7 +126,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--accent-cyan);
             font-size: 1.1rem;
         }
 
@@ -164,7 +135,6 @@
             color: var(--text-main);
         }
 
-        /* Copy Button */
         .btn-copy {
             background-color: var(--accent-purple);
             color: #ffffff;
@@ -177,7 +147,7 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: all 0.2s ease;
             box-shadow: 0 4px 12px rgba(88, 101, 242, 0.25);
             user-select: none;
         }
@@ -195,18 +165,9 @@
         .btn-copy.copied {
             background-color: var(--success-bg) !important;
             box-shadow: 0 4px 12px rgba(35, 165, 90, 0.3) !important;
-            animation: pulse-success 0.3s ease;
         }
 
-        @keyframes pulse-success {
-            0% { transform: scale(0.95); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        /* Text Viewer (Pre Block) */
         .text-preview-wrapper {
-            position: relative;
             background-color: var(--bg-tertiary);
             border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -225,25 +186,14 @@
             overflow-y: auto;
         }
 
-        /* Scrollbar Tối Ưu */
         pre::-webkit-scrollbar {
             width: 6px;
         }
-
-        pre::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-        }
-
         pre::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.15);
             border-radius: 4px;
         }
 
-        pre::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.25);
-        }
-
-        /* Toast Message Notify */
         .toast {
             position: fixed;
             bottom: 24px;
@@ -259,7 +209,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(35, 165, 90, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
             opacity: 0;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 1000;
@@ -282,44 +232,13 @@
             font-size: 12px;
         }
 
-        /* Footer */
-        .footer {
-            text-align: center;
-            margin-top: auto;
-            padding-top: 24px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        /* Dynamic Responsive */
         @media (max-width: 600px) {
-            body {
-                padding: 16px 12px;
-            }
-
-            .title {
-                font-size: 1.5rem;
-            }
-
-            .card {
-                padding: 16px;
-            }
-
-            .card-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .btn-copy {
-                justify-content: center;
-                width: 100%;
-                padding: 12px;
-            }
-
-            pre {
-                font-size: 0.82rem;
-                max-height: 200px;
-            }
+            body { padding: 16px 12px; }
+            .title { font-size: 1.5rem; }
+            .card { padding: 16px; }
+            .card-header { flex-direction: column; align-items: stretch; }
+            .btn-copy { justify-content: center; width: 100%; padding: 12px; }
+            pre { font-size: 0.82rem; max-height: 200px; }
         }
     </style>
 </head>
@@ -344,7 +263,7 @@
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                     </svg>
-                    <span class="btn-text">Sao chép nhanh</span>
+                    <span class="btn-text">Sao chép</span>
                 </button>
             </div>
             <div class="text-preview-wrapper">
@@ -382,7 +301,7 @@ Contact: <@1392128005370937455> & <@1429310168700817489></pre>
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                     </svg>
-                    <span class="btn-text">Sao chép nhanh</span>
+                    <span class="btn-text">Sao chép</span>
                 </button>
             </div>
             <div class="text-preview-wrapper">
@@ -408,10 +327,6 @@ Contact: <@1392128005370937455> & <@1429310168700817489></pre>
 DM me to join @zen_t5c</pre>
             </div>
         </div>
-
-        <footer class="footer">
-            
-        </footer>
     </div>
 
     <!-- Toast Notification -->
@@ -420,7 +335,6 @@ DM me to join @zen_t5c</pre>
         <span id="toast-message">Đã sao chép vào bộ nhớ tạm!</span>
     </div>
 
-    <!-- JavaScript xử lý copy mượt mà -->
     <script>
         let toastTimeout;
 
@@ -428,23 +342,17 @@ DM me to join @zen_t5c</pre>
             const textElement = document.getElementById(elementId);
             const textToCopy = textElement.innerText;
 
-            // Hàm cập nhật UI khi copy thành công
             const onSuccess = () => {
-                // Đổi trạng thái Button
                 btnElement.classList.add('copied');
                 const btnText = btnElement.querySelector('.btn-text');
                 const btnIcon = btnElement.querySelector('.icon-copy');
                 
                 const originalText = btnText.innerText;
                 btnText.innerText = 'Đã sao chép!';
-                
-                // SVG Checkmark
                 btnIcon.innerHTML = `<polyline points="20 6 9 17 4 12"></polyline>`;
 
-                // Hiện Toast notification
                 showToast(`Đã copy nội dung ${elementId === 'text1' ? 'Clan Official Rivals' : 'Clan Sec Rivals'}!`);
 
-                // Reset button sau 2 giây
                 setTimeout(() => {
                     btnElement.classList.remove('copied');
                     btnText.innerText = originalText;
@@ -455,7 +363,6 @@ DM me to join @zen_t5c</pre>
                 }, 2000);
             };
 
-            // Sử dụng Clipboard API hiện đại, có fallback cho iframe/trình duyệt cũ
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(textToCopy)
                     .then(onSuccess)
@@ -465,7 +372,6 @@ DM me to join @zen_t5c</pre>
             }
         }
 
-        // Fallback copy cho tương thích cao nhất
         function fallbackCopyText(text, callback) {
             const textArea = document.createElement("textarea");
             textArea.value = text;
@@ -486,7 +392,6 @@ DM me to join @zen_t5c</pre>
             document.body.removeChild(textArea);
         }
 
-        // Hiện Toast Thông Báo
         function showToast(message) {
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toast-message');
