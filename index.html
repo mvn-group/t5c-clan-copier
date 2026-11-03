@@ -232,6 +232,28 @@
             font-size: 12px;
         }
 
+
+        .manager-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+        .btn-add, .btn-secondary, .btn-danger {
+            border:1px solid var(--border-color); border-radius:10px; padding:10px 14px;
+            color:var(--text-main); cursor:pointer; font-weight:600; background:var(--bg-tertiary);
+        }
+        .btn-add { background:var(--accent-purple); border-color:transparent; }
+        .btn-secondary:hover, .btn-danger:hover { filter:brightness(1.2); }
+        .btn-danger { color:#ff8585; }
+        .editor { display:none; gap:12px; margin-top:16px; }
+        .editor.open { display:grid; }
+        .editor label { color:var(--text-muted); font-size:.85rem; display:grid; gap:6px; }
+        .editor input, .editor textarea {
+            width:100%; border:1px solid var(--border-color); border-radius:9px; padding:11px;
+            color:var(--text-main); background:var(--bg-tertiary); outline:none; font-size:.95rem;
+        }
+        .editor textarea { min-height:150px; resize:vertical; line-height:1.5; }
+        .editor-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        .custom-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        .empty-note { color:var(--text-muted); font-size:.9rem; }
+        .small-btn { padding:8px 11px; font-size:.8rem; }
+
         @media (max-width: 600px) {
             body { padding: 16px 12px; }
             .title { font-size: 1.5rem; }
@@ -329,6 +351,33 @@ DM me to join @zen_t5c</pre>
         </div>
     </div>
 
+
+        <section class="card" id="custom-manager">
+            <div class="manager-toolbar">
+                <div>
+                    <h2 class="card-title">My Saved Messages</h2>
+                    <p class="subtitle">Tự thêm và lưu các mẫu tin nhắn riêng của bạn.</p>
+                </div>
+                <button class="btn-add" type="button" onclick="openEditor()">＋ Add Message</button>
+            </div>
+
+            <form class="editor" id="message-editor">
+                <label>Message title
+                    <input id="message-title" type="text" maxlength="80" placeholder="Ví dụ: Tournament Announcement" required>
+                </label>
+                <label>Message content
+                    <textarea id="message-content" placeholder="Nhập nội dung tin nhắn..." required></textarea>
+                </label>
+                <div class="editor-actions">
+                    <button class="btn-add" type="submit">Save Message</button>
+                    <button class="btn-secondary" type="button" onclick="closeEditor()">Cancel</button>
+                </div>
+            </form>
+            <div id="custom-messages" style="display:grid;gap:16px;margin-top:18px;">
+                <p class="empty-note">Chưa có tin nhắn nào. Bấm “Add Message” để thêm.</p>
+            </div>
+        </section>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast">
         <div class="toast-icon">✓</div>
@@ -337,39 +386,38 @@ DM me to join @zen_t5c</pre>
 
     <script>
         let toastTimeout;
+        const STORAGE_KEY = 't5c-copy-center-custom-messages';
+        let editingId = null;
 
-        function copyContent(elementId, btnElement) {
-            const textElement = document.getElementById(elementId);
-            const textToCopy = textElement.innerText;
-
+        function copyText(text, btnElement, label = 'message') {
             const onSuccess = () => {
-                btnElement.classList.add('copied');
-                const btnText = btnElement.querySelector('.btn-text');
-                const btnIcon = btnElement.querySelector('.icon-copy');
-                
-                const originalText = btnText.innerText;
-                btnText.innerText = 'Đã sao chép!';
-                btnIcon.innerHTML = `<polyline points="20 6 9 17 4 12"></polyline>`;
-
-                showToast(`Đã copy nội dung ${elementId === 'text1' ? 'Clan Official Rivals' : 'Clan Sec Rivals'}!`);
-
-                setTimeout(() => {
-                    btnElement.classList.remove('copied');
-                    btnText.innerText = originalText;
-                    btnIcon.innerHTML = `
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    `;
-                }, 2000);
+                if (btnElement) {
+                    btnElement.classList.add('copied');
+                    const textNode = btnElement.querySelector('.btn-text');
+                    if (textNode) {
+                        const originalText = textNode.innerText;
+                        textNode.innerText = 'Đã sao chép!';
+                        setTimeout(() => {
+                            btnElement.classList.remove('copied');
+                            textNode.innerText = originalText;
+                        }, 2000);
+                    }
+                }
+                showToast(`Đã copy ${label}!`);
             };
 
             if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(textToCopy)
-                    .then(onSuccess)
-                    .catch(() => fallbackCopyText(textToCopy, onSuccess));
+                navigator.clipboard.writeText(text).then(onSuccess)
+                    .catch(() => fallbackCopyText(text, onSuccess));
             } else {
-                fallbackCopyText(textToCopy, onSuccess);
+                fallbackCopyText(text, onSuccess);
             }
+        }
+
+        function copyContent(elementId, btnElement) {
+            const textElement = document.getElementById(elementId);
+            copyText(textElement.innerText, btnElement,
+                elementId === 'text1' ? 'Clan Official Rivals' : 'Clan Sec Rivals');
         }
 
         function fallbackCopyText(text, callback) {
@@ -381,29 +429,122 @@ DM me to join @zen_t5c</pre>
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-            
             try {
-                document.execCommand('copy');
-                callback();
+                const successful = document.execCommand('copy');
+                if (successful) callback();
+                else showToast('Không thể sao chép. Hãy thử lại!');
             } catch (err) {
                 console.error('Không thể sao chép văn bản: ', err);
+                showToast('Không thể sao chép. Hãy thử lại!');
             }
-            
             document.body.removeChild(textArea);
         }
 
         function showToast(message) {
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toast-message');
-            
             toastMessage.innerText = message;
             toast.classList.add('show');
-
             clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2500);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
         }
+
+        function getMessages() {
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+            catch { return []; }
+        }
+
+        function saveMessages(messages) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+        }
+
+        function openEditor(message = null) {
+            editingId = message ? message.id : null;
+            document.getElementById('message-title').value = message ? message.title : '';
+            document.getElementById('message-content').value = message ? message.content : '';
+            document.getElementById('message-editor').classList.add('open');
+            document.getElementById('message-title').focus();
+        }
+
+        function closeEditor() {
+            document.getElementById('message-editor').classList.remove('open');
+            document.getElementById('message-editor').reset();
+            editingId = null;
+        }
+
+        document.getElementById('message-editor').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const title = document.getElementById('message-title').value.trim();
+            const content = document.getElementById('message-content').value.trim();
+            if (!title || !content) return;
+
+            const messages = getMessages();
+            if (editingId) {
+                const index = messages.findIndex(item => item.id === editingId);
+                if (index !== -1) messages[index] = { ...messages[index], title, content };
+            } else {
+                messages.push({ id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), title, content });
+            }
+            saveMessages(messages);
+            closeEditor();
+            renderMessages();
+            showToast('Đã lưu tin nhắn!');
+        });
+
+        function renderMessages() {
+            const container = document.getElementById('custom-messages');
+            const messages = getMessages();
+            container.innerHTML = '';
+            if (!messages.length) {
+                container.innerHTML = '<p class="empty-note">Chưa có tin nhắn nào. Bấm “Add Message” để thêm.</p>';
+                return;
+            }
+
+            messages.forEach(message => {
+                const card = document.createElement('div');
+                card.className = 'text-preview-wrapper';
+                card.style.padding = '14px';
+                const header = document.createElement('div');
+                header.className = 'card-header';
+                const title = document.createElement('h3');
+                title.className = 'card-title';
+                title.textContent = message.title;
+                const actions = document.createElement('div');
+                actions.className = 'custom-card-actions';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'btn-copy';
+                copyBtn.type = 'button';
+                copyBtn.innerHTML = '<span class="btn-text">Sao chép</span>';
+                copyBtn.addEventListener('click', () => copyText(message.content, copyBtn, message.title));
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn-secondary small-btn';
+                editBtn.type = 'button';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => openEditor(message));
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-danger small-btn';
+                deleteBtn.type = 'button';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', () => {
+                    if (!confirm(`Xóa mẫu "${message.title}"?`)) return;
+                    saveMessages(getMessages().filter(item => item.id !== message.id));
+                    renderMessages();
+                    showToast('Đã xóa tin nhắn!');
+                });
+
+                actions.append(copyBtn, editBtn, deleteBtn);
+                header.append(title, actions);
+                const preview = document.createElement('pre');
+                preview.textContent = message.content;
+                card.append(header, preview);
+                container.appendChild(card);
+            });
+        }
+
+        renderMessages();
     </script>
 </body>
 </html>
