@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>T5C Clan Copy</title>
+    <title>T5C Clan Copy Center</title>
     <style>
         :root {
             --bg-primary: #0f1015;
@@ -278,6 +278,16 @@
         .empty-note { color:var(--text-muted); font-size:.9rem; }
         .small-btn { padding:8px 11px; font-size:.8rem; }
 
+
+        .auth-panel { margin-top:18px; padding:18px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-tertiary); }
+        .auth-form { display:grid; grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto; gap:12px; align-items:end; }
+        .auth-form label { color:var(--text-muted); font-size:.85rem; display:grid; gap:6px; }
+        .auth-form input { width:100%; border:1px solid var(--border-color); border-radius:9px; padding:11px; color:var(--text-main); background:var(--bg-secondary); outline:none; font-size:.95rem; }
+        .auth-status { color:var(--text-muted); font-size:.88rem; margin-top:10px; overflow-wrap:anywhere; }
+        .account-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:14px; }
+        #manager-content[hidden], #auth-panel[hidden] { display:none !important; }
+        @media (max-width:760px) { .auth-form { grid-template-columns:1fr; } }
+
         @media (max-width: 760px) {
             body { padding: 16px 12px; }
             .app-container { grid-template-columns: 1fr; gap: 16px; }
@@ -391,6 +401,33 @@ DM me to join @zen_t5c</pre>
             <div class="manager-toolbar">
                 <div>
                     <h2 class="card-title">My Saved Messages</h2>
+                    <p class="subtitle">Tin nhắn được lưu online trên Supabase, không phụ thuộc dữ liệu trình duyệt.</p>
+                </div>
+            </div>
+
+            <div class="auth-panel" id="auth-panel">
+                <h3 class="card-title">Đăng nhập để quản lý tin nhắn</h3>
+                <p class="subtitle">Dùng email và mật khẩu bạn đã tạo trong Supabase Authentication.</p>
+                <form class="auth-form" id="login-form">
+                    <label>Email
+                        <input id="login-email" type="email" autocomplete="username" placeholder="Email Supabase" required>
+                    </label>
+                    <label>Password
+                        <input id="login-password" type="password" autocomplete="current-password" placeholder="Mật khẩu" required>
+                    </label>
+                    <button class="btn-add" type="submit" id="login-button">Log in</button>
+                </form>
+                <p class="auth-status" id="auth-status" role="status">Đăng nhập để tải các tin nhắn đã lưu.</p>
+            </div>
+
+            <div id="manager-content" hidden>
+                <div class="account-bar">
+                    <p class="auth-status" id="account-email"></p>
+                    <button class="btn-secondary small-btn" type="button" id="logout-button">Log out</button>
+                </div>
+                <div class="manager-toolbar" style="margin-top:18px;">
+                <div>
+                    <h2 class="card-title">My Saved Messages</h2>
                     <p class="subtitle">Tự thêm và lưu các mẫu tin nhắn riêng của bạn.</p>
                 </div>
                 <button class="btn-add" type="button" onclick="openEditor()">＋ Add Message</button>
@@ -409,7 +446,8 @@ DM me to join @zen_t5c</pre>
                 </div>
             </form>
             <div id="custom-messages" style="display:grid;gap:16px;margin-top:18px;">
-                <p class="empty-note">Chưa có tin nhắn nào. Bấm “Add Message” để thêm.</p>
+                <p class="empty-note">Đang tải tin nhắn...</p>
+            </div>
             </div>
         </section>
 
@@ -419,10 +457,31 @@ DM me to join @zen_t5c</pre>
         <span id="toast-message">Đã sao chép vào bộ nhớ tạm!</span>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Public frontend credentials. RLS policies protect the messages table.
+        const SUPABASE_URL = 'https://gcrwgtkdbsbbcgnutlhn.supabase.co';
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_gZIVNPEWRRuwV-NVw0_KOQ_dliTXTR6';
+
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY,
+            {
+                auth: {
+                    // Only the login session is kept for this browser tab.
+                    // Message content itself is stored in Supabase, never localStorage.
+                    persistSession: true,
+                    storage: window.sessionStorage,
+                    autoRefreshToken: true,
+                    detectSessionInUrl: true
+                }
+            }
+        );
+
         let toastTimeout;
-        const STORAGE_KEY = 't5c-copy-center-custom-messages';
         let editingId = null;
+        let currentUser = null;
+        let messagesCache = [];
 
         function copyText(text, btnElement, label = 'message') {
             const onSuccess = () => {
@@ -484,13 +543,78 @@ DM me to join @zen_t5c</pre>
             toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
         }
 
-        function getMessages() {
-            try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-            catch { return []; }
+        function setAuthStatus(message, isError = false) {
+            const status = document.getElementById('auth-status');
+            status.textContent = message;
+            status.style.color = isError ? '#ff8585' : 'var(--text-muted)';
         }
 
-        function saveMessages(messages) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+        function updateAuthUI() {
+            const signedIn = Boolean(currentUser);
+            document.getElementById('auth-panel').hidden = signedIn;
+            document.getElementById('manager-content').hidden = !signedIn;
+            document.getElementById('account-email').textContent =
+                signedIn ? `Đang đăng nhập: ${currentUser.email || 'Supabase user'}` : '';
+            if (!signedIn) {
+                messagesCache = [];
+                renderMessages();
+            }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const button = document.getElementById('login-button');
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            button.disabled = true;
+            button.textContent = 'Đang đăng nhập...';
+            setAuthStatus('Đang xác thực tài khoản...');
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            button.disabled = false;
+            button.textContent = 'Log in';
+
+            if (error) {
+                setAuthStatus(`Đăng nhập thất bại: ${error.message}`, true);
+                return;
+            }
+            currentUser = data.user;
+            updateAuthUI();
+            await loadMessages();
+        });
+
+        document.getElementById('logout-button').addEventListener('click', async () => {
+            const { error } = await supabaseClient.auth.signOut();
+            if (error) {
+                showToast(`Đăng xuất lỗi: ${error.message}`);
+                return;
+            }
+            currentUser = null;
+            updateAuthUI();
+            closeEditor();
+            setAuthStatus('Bạn đã đăng xuất. Đăng nhập lại để quản lý tin nhắn.');
+        });
+
+        async function loadMessages() {
+            if (!currentUser) return;
+            const container = document.getElementById('custom-messages');
+            container.innerHTML = '<p class="empty-note">Đang tải tin nhắn từ Supabase...</p>';
+
+            const { data, error } = await supabaseClient
+                .from('messages')
+                .select('id, title, content, created_at')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                container.innerHTML = '';
+                const note = document.createElement('p');
+                note.className = 'empty-note';
+                note.textContent = `Không tải được dữ liệu: ${error.message}`;
+                container.appendChild(note);
+                return;
+            }
+            messagesCache = data || [];
+            renderMessages();
         }
 
         function openEditor(message = null) {
@@ -507,43 +631,70 @@ DM me to join @zen_t5c</pre>
             editingId = null;
         }
 
-        document.getElementById('message-editor').addEventListener('submit', function(event) {
+        document.getElementById('message-editor').addEventListener('submit', async function(event) {
             event.preventDefault();
+            if (!currentUser) {
+                showToast('Hãy đăng nhập trước!');
+                return;
+            }
+
             const title = document.getElementById('message-title').value.trim();
             const content = document.getElementById('message-content').value.trim();
             if (!title || !content) return;
 
-            const messages = getMessages();
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
+
+            let result;
             if (editingId) {
-                const index = messages.findIndex(item => item.id === editingId);
-                if (index !== -1) messages[index] = { ...messages[index], title, content };
+                result = await supabaseClient
+                    .from('messages')
+                    .update({ title, content })
+                    .eq('id', editingId)
+                    .select()
+                    .single();
             } else {
-                messages.push({ id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), title, content });
+                result = await supabaseClient
+                    .from('messages')
+                    .insert({ title, content, owner_id: currentUser.id })
+                    .select()
+                    .single();
             }
-            saveMessages(messages);
+
+            submitButton.disabled = false;
+            submitButton.textContent = 'Save Message';
+
+            if (result.error) {
+                showToast(`Không lưu được: ${result.error.message}`);
+                return;
+            }
+
             closeEditor();
-            renderMessages();
-            showToast('Đã lưu tin nhắn!');
+            await loadMessages();
+            showToast(editingId ? 'Đã cập nhật tin nhắn!' : 'Đã lưu tin nhắn!');
         });
 
         function renderMessages() {
             const container = document.getElementById('custom-messages');
-            const messages = getMessages();
             container.innerHTML = '';
-            if (!messages.length) {
+            if (!messagesCache.length) {
                 container.innerHTML = '<p class="empty-note">Chưa có tin nhắn nào. Bấm “Add Message” để thêm.</p>';
                 return;
             }
 
-            messages.forEach(message => {
+            messagesCache.forEach(message => {
                 const card = document.createElement('div');
                 card.className = 'text-preview-wrapper';
                 card.style.padding = '14px';
+
                 const header = document.createElement('div');
                 header.className = 'card-header';
+
                 const title = document.createElement('h3');
                 title.className = 'card-title';
                 title.textContent = message.title;
+
                 const actions = document.createElement('div');
                 actions.className = 'custom-card-actions';
 
@@ -563,15 +714,26 @@ DM me to join @zen_t5c</pre>
                 deleteBtn.className = 'btn-danger small-btn';
                 deleteBtn.type = 'button';
                 deleteBtn.textContent = 'Delete';
-                deleteBtn.addEventListener('click', () => {
+                deleteBtn.addEventListener('click', async () => {
                     if (!confirm(`Xóa mẫu "${message.title}"?`)) return;
-                    saveMessages(getMessages().filter(item => item.id !== message.id));
-                    renderMessages();
+                    deleteBtn.disabled = true;
+                    const { error } = await supabaseClient
+                        .from('messages')
+                        .delete()
+                        .eq('id', message.id);
+
+                    if (error) {
+                        deleteBtn.disabled = false;
+                        showToast(`Không xóa được: ${error.message}`);
+                        return;
+                    }
+                    await loadMessages();
                     showToast('Đã xóa tin nhắn!');
                 });
 
                 actions.append(copyBtn, editBtn, deleteBtn);
                 header.append(title, actions);
+
                 const preview = document.createElement('pre');
                 preview.textContent = message.content;
                 card.append(header, preview);
@@ -579,7 +741,30 @@ DM me to join @zen_t5c</pre>
             });
         }
 
-        renderMessages();
+        document.getElementById('message-editor').addEventListener('reset', () => {
+            editingId = null;
+        });
+
+        // Restore an existing session after refresh and listen for sign-in/out changes.
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+            currentUser = session ? session.user : null;
+            updateAuthUI();
+            if (currentUser) {
+                // Defer the database request until the auth callback has completed.
+                Promise.resolve().then(() => loadMessages());
+            }
+        });
+
+        (async function initializeAuth() {
+            const { data, error } = await supabaseClient.auth.getSession();
+            if (error) {
+                setAuthStatus(`Không kiểm tra được phiên đăng nhập: ${error.message}`, true);
+                return;
+            }
+            currentUser = data.session ? data.session.user : null;
+            updateAuthUI();
+            if (currentUser) await loadMessages();
+        })();
     </script>
 </body>
 </html>
