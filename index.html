@@ -391,7 +391,7 @@ Contact: <@1392128005370937455> & <@1429310168700817489></pre>
 
 :fire: JOIN OUR CLAN TO GROW UP YOUR SKILL  :fire: 
 
-DM me to join <@1429310168700817489></pre>
+DM me to join @zen_t5c</pre>
             </div>
         </div>
     </div>
@@ -468,10 +468,11 @@ DM me to join <@1429310168700817489></pre>
             SUPABASE_PUBLISHABLE_KEY,
             {
                 auth: {
-                    // Only the login session is kept for this browser tab.
-                    // Message content itself is stored in Supabase, never localStorage.
+                    // Keep the login session across tab/browser restarts.
+                    // Only authentication tokens are stored locally; message content
+                    // remains in Supabase and is never saved in browser storage.
                     persistSession: true,
-                    storage: window.sessionStorage,
+                    storage: window.localStorage,
                     autoRefreshToken: true,
                     detectSessionInUrl: true
                 }
@@ -670,9 +671,10 @@ DM me to join <@1429310168700817489></pre>
                 return;
             }
 
+            const wasEditing = Boolean(editingId);
             closeEditor();
             await loadMessages();
-            showToast(editingId ? 'Đã cập nhật tin nhắn!' : 'Đã lưu tin nhắn!');
+            showToast(wasEditing ? 'Đã cập nhật tin nhắn!' : 'Đã lưu tin nhắn!');
         });
 
         function renderMessages() {
