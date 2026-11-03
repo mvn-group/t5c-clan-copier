@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>T5C Clan Copy Utility</title>
+    <title>T5C Clan Copy</title>
     <style>
         :root {
             --bg-primary: #0f1015;
@@ -43,10 +43,34 @@
 
         .app-container {
             width: 100%;
-            max-width: 800px;
-            display: flex;
-            flex-direction: column;
+            max-width: 1440px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: start;
             gap: 24px;
+        }
+
+        .app-container > .header {
+            grid-column: 1 / -1;
+        }
+
+        #custom-manager {
+            width: 100%;
+            max-width: 1440px;
+            margin-top: 24px;
+        }
+
+        #custom-messages {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: start;
+        }
+
+        .editor.open {
+            grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+        }
+
+        .editor-actions {
+            grid-column: 1 / -1;
         }
 
         .header {
@@ -254,13 +278,24 @@
         .empty-note { color:var(--text-muted); font-size:.9rem; }
         .small-btn { padding:8px 11px; font-size:.8rem; }
 
-        @media (max-width: 600px) {
+        @media (max-width: 760px) {
             body { padding: 16px 12px; }
+            .app-container { grid-template-columns: 1fr; gap: 16px; }
+            .app-container > .header { grid-column: auto; }
+            #custom-manager { margin-top: 16px; }
+            #custom-messages { grid-template-columns: 1fr; }
+            .editor.open { grid-template-columns: 1fr; }
+            .editor-actions { grid-column: auto; }
             .title { font-size: 1.5rem; }
             .card { padding: 16px; }
-            .card-header { flex-direction: column; align-items: stretch; }
-            .btn-copy { justify-content: center; width: 100%; padding: 12px; }
+            .card-header { flex-direction: row; align-items: center; }
+            .btn-copy { justify-content: center; padding: 10px 14px; width: auto; }
             pre { font-size: 0.82rem; max-height: 200px; }
+        }
+
+        @media (max-width: 420px) {
+            .card-header { flex-direction: column; align-items: stretch; }
+            .btn-copy { width: 100%; padding: 12px; }
         }
     </style>
 </head>
